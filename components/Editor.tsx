@@ -1,7 +1,6 @@
-// components/Editor.tsx
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, Editor as TiptapEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -31,6 +30,14 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { LucideIcon } from "lucide-react";
+
+// ✅ Define proper types
+interface EmojiData {
+  native: string;
+  id: string;
+  name: string;
+}
 
 // Tooltip-wrapped icon button
 const ToolbarButton = ({
@@ -39,7 +46,7 @@ const ToolbarButton = ({
   label,
 }: {
   onClick: () => void;
-  icon: any;
+  icon: LucideIcon; // ✅ Fixed: proper type instead of any
   label: string;
 }) => (
   <TooltipProvider>
@@ -60,7 +67,7 @@ const ToolbarButton = ({
   </TooltipProvider>
 );
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: TiptapEditor | null }) => { // ✅ Fixed: proper type
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -86,7 +93,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
     if (url) editor.chain().focus().setLink({ href: url }).run();
   };
 
-  const addEmoji = (emoji: any) => {
+  const addEmoji = (emoji: EmojiData) => { // ✅ Fixed: proper type instead of any
     editor.chain().focus().insertContent(emoji.native).run();
     setShowEmojiPicker(false);
   };

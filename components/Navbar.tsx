@@ -13,17 +13,29 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/router";
+import { User } from "@supabase/supabase-js";
+
+// ✅ Define proper types
+interface Notification {
+  id: string;
+  user_id: string;
+  type: string;
+  message: string;
+  link: string;
+  read: boolean;
+  created_at: string;
+}
 
 const Navbar = () => {
-  const [user, setUser] = useState<any>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null); // ✅ Fixed: proper type instead of any
+  const [notifications, setNotifications] = useState<Notification[]>([]); // ✅ Fixed: proper type
   const router = useRouter();
 
   useEffect(() => {
     const getUserAndNotifications = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const sessionUser = sessionData?.session?.user;
-      setUser(sessionUser);
+      setUser(sessionUser || null);
 
       if (sessionUser) {
         const { data, error } = await supabase
@@ -39,20 +51,19 @@ const Navbar = () => {
     getUserAndNotifications();
 
     // Optional: real-time notifications
-  const subscription = supabase
-    .channel("notifications")
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "notifications" },
-      () => getUserAndNotifications()
-    )
-    .subscribe();
+    const subscription = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications" },
+        () => getUserAndNotifications()
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(subscription);
-  };
-}, []);
-
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

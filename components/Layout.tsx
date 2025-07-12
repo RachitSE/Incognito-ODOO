@@ -1,6 +1,5 @@
 // components/Layout.tsx
 import Navbar from "./Navbar";
-import LogoutButton from "./LogoutButton";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

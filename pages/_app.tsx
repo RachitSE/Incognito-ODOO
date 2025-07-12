@@ -1,4 +1,3 @@
-// pages/_app.tsx
 "use client";
 
 import "@/styles/globals.css";
@@ -14,41 +13,44 @@ import { Toaster } from "sonner";
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [isAuth, setIsAuth] = useState(false);
+  const [, setIsAuth] = useState(false);
 
   const isLoginPage = router.pathname === "/login";
 
-useEffect(() => {
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (session) {
-      setIsAuth(true);
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        setIsAuth(true);
 
-      // ✅ Upsert user into `users` table
-      await supabase.from("users").upsert({
-        id: session.user.id,
-        email: session.user.email,
-        role: "user", // optional
-      });
-    } else {
-      if (!isLoginPage) {
+        // ✅ Upsert user into `users` table
+        await supabase.from("users").upsert({
+          id: session.user.id,
+          email: session.user.email,
+          role: "user", // optional
+        });
+      } else {
+        if (!isLoginPage) {
+          router.push("/login");
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
+
+    // Session change listener
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session && !isLoginPage) {
         router.push("/login");
       }
-    }
-    setLoading(false);
-  });
+    });
 
-  // Session change listener (unchanged)
-  const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session && !isLoginPage) {
-      router.push("/login");
-    }
-  });
-
-  return () => {
-    listener?.subscription.unsubscribe();
-  };
-}, [router.pathname]);
-
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
+  }, [router, isLoginPage]);
 
   if (loading) {
     return (

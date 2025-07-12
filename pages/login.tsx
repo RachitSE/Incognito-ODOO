@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   // ✅ Redirect to home if already logged in
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        router.push("/");
-      }
-    });
-  }, []);
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    if (data.session) router.push("/");
+  });
+}, [router]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,14 +94,14 @@ export default function LoginPage() {
 
           <div className="flex gap-3">
             <Button
-              variant="outline"
-              onClick={() => loginWithProvider("google")}
-              className="w-full"
-              disabled={loading}
-            >
-              <img src="/assets/google.svg" alt="Google" className="w-4 h-4 mr-2" />
-              Google
-            </Button>
+  variant="outline"
+  onClick={() => loginWithProvider("google")}
+  className="w-full"
+  disabled={loading}
+>
+<Image src="/assets/google.svg" alt="Google" width={16} height={16} className="mr-2" />
+  Google
+</Button>
 
             <Button
               variant="outline"

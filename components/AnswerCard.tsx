@@ -7,12 +7,14 @@ import {
   CheckCircle2,
   Check,
   Trash,
-  Pencil
+  
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
+import { User } from "@supabase/supabase-js";
+
 
 interface Comment {
   id: string;
@@ -47,30 +49,37 @@ export default function AnswerCard({
   onAccept,
 }: AnswerProps) {
   const [voteState, setVoteState] = useState(userVote);
-  const [comments, setComments] = useState<Comment[]>([]);
+const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
+const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState("user");
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
-      setCurrentUser(user);
+useEffect(() => {
+  const init = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData?.session?.user;
+    setCurrentUser(user ?? null);
 
-      if (user) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (userData?.role) setUserRole(userData.role);
-      }
-    };
+    if (user) {
+      const { data: userData } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (userData?.role) setUserRole(userData.role);
+    }
 
-    fetchUser();
-    fetchComments();
-  }, []);
+    const { data: commentsData } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("answer_id", id)
+      .order("created_at", { ascending: true });
+
+    if (commentsData) setComments(commentsData);
+  };
+
+  init();
+}, [id]);
 
   const handleVote = async (value: number) => {
     const newVote = voteState === value ? 0 : value;

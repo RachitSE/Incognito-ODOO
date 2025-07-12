@@ -1,4 +1,3 @@
-// pages/ask.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import Editor from "@/components/Editor";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/router";
+import { User } from "@supabase/supabase-js";
 
 export default function AskPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null); // ✅ Fixed: User type instead of any
   const router = useRouter();
 
   // ✅ Fetch session user
@@ -45,7 +45,7 @@ export default function AskPage() {
             .map((t) => t.trim())
             .filter(Boolean),
           author_id: user.id,
-          author: user.email, // ✅ This is for display purposes
+          author: user.email,
         },
       ]);
 

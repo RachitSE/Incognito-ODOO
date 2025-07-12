@@ -9,6 +9,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const router = useRouter();
 
   useEffect(() => {
+  if (!router.isReady) return;
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         router.push("/login");
@@ -16,7 +17,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         setLoading(false);
       }
     });
-  }, []);
+  }, [router]);
 
   if (loading) return null; // or a spinner
 

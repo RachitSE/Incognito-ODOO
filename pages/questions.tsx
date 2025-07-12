@@ -11,7 +11,16 @@ import Link from "next/link";
 import { Trash } from "lucide-react";
 
 export default function QuestionsPage() {
-  const [questions, setQuestions] = useState<any[]>([]);
+interface Question {
+  id: number;
+  title: string;
+  description: string;
+  tags: string[];
+  votes: number;
+  author: string;
+  created_at: string;
+}
+const [questions, setQuestions] = useState<Question[]>([]);
   const [filter, setFilter] = useState("recent");
   const [search, setSearch] = useState("");
   const [userRole, setUserRole] = useState("user");
@@ -19,18 +28,6 @@ export default function QuestionsPage() {
   
 
   // ✅ Fetch questions
-  const fetchQuestions = async () => {
-    const { data, error } = await supabase
-      .from("questions")
-      .select("id, title, description, tags, votes, author, created_at")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching questions:", error.message);
-    } else {
-      setQuestions(data);
-    }
-  };
 
   // ✅ Fetch user role
 useEffect(() => {

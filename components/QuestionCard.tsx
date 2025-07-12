@@ -17,7 +17,6 @@ interface QuestionProps {
 }
 
 export default function QuestionCard({
-  id,
   title,
   description,
   tags,

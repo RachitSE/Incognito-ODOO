@@ -1,29 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/lib/supabase";
 import { Badge } from "@/components/ui/badge";
 import AnswerCard from "@/components/AnswerCard";
 import Editor from "@/components/Editor";
 import { Button } from "@/components/ui/button";
+import { User } from "@supabase/supabase-js";
+
+interface Question {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  author_id: string;
+  author: string;
+  created_at: string;
+}
+
+interface Answer {
+  id: string;
+  content: string;
+  author: string;
+  created_at: string;
+  votes: number;
+  userVote: number;
+  is_accepted: boolean;
+  question_id: string;
+  author_id: string;
+}
+
+interface Vote {
+  answer_id: string;
+  value: number;
+}
 
 export default function QuestionDetailPage() {
   const router = useRouter();
   const { id } = router.query;
 
-  const [question, setQuestion] = useState<any>(null);
-  const [answers, setAnswers] = useState<any[]>([]);
+  const [question, setQuestion] = useState<Question | null>(null);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [answerContent, setAnswerContent] = useState("");
-  const [currentUser, setCurrentUser] = useState<any>(null);
-const [userRole, setUserRole] = useState("user"); // new state
 
-  const refreshAnswers = async () => {
+  const refreshAnswers = useCallback(async () => {
     if (!id) return;
 
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
-    setCurrentUser(user);
+    setCurrentUser(user ?? null);
 
     const { data: answerData, error } = await supabase
       .from("answers")
@@ -55,7 +82,7 @@ const [userRole, setUserRole] = useState("user"); // new state
         .eq("user_id", user.id);
 
       enrichedAnswers = enrichedAnswers.map((ans) => {
-        const vote = votes?.find((v) => v.answer_id === ans.id);
+        const vote = votes?.find((v: Vote) => v.answer_id === ans.id);
         return {
           ...ans,
           userVote: vote?.value || 0,
@@ -64,97 +91,82 @@ const [userRole, setUserRole] = useState("user"); // new state
     }
 
     setAnswers(enrichedAnswers);
-  };
+  }, [id]);
 
- useEffect(() => {
-  if (!id) return;
+  useEffect(() => {
+    if (!id) return;
 
-  const fetchQuestionAndUser = async () => {
-    // 1. Get question
-    const { data: questionData, error: questionError } = await supabase
-      .from("questions")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const fetchQuestionAndUser = async () => {
+      // 1. Get question
+      const { data: questionData, error: questionError } = await supabase
+        .from("questions")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-    if (questionError) {
-      console.error("Error fetching question:", questionError.message);
+      if (questionError) {
+        console.error("Error fetching question:", questionError.message);
+        return;
+      }
+
+      setQuestion(questionData);
+
+      // 2. Get session user
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+      setCurrentUser(user ?? null);
+    };
+
+    fetchQuestionAndUser();
+    refreshAnswers();
+  }, [id, refreshAnswers]);
+
+  const submitAnswer = async () => {
+    if (!answerContent || answerContent.trim() === "<p></p>") {
+      alert("Answer cannot be empty.");
       return;
     }
 
-    setQuestion(questionData);
-
-    // 2. Get session user
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData?.session?.user;
-    setCurrentUser(user);
 
-    if (user) {
-      const { data: userData, error: roleError } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (roleError) {
-        console.error("Error fetching user role:", roleError.message);
-      } else {
-        setUserRole(userData?.role || "user"); // ✅ Save role in state
-      }
+    if (!user) {
+      router.push("/login");
+      return;
     }
-  };
 
-  fetchQuestionAndUser();
-  refreshAnswers();
-}, [id]);
-
-const submitAnswer = async () => {
-  if (!answerContent || answerContent.trim() === "<p></p>") {
-    alert("Answer cannot be empty.");
-    return;
-  }
-
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
-
-  if (!user) {
-    router.push("/login");
-    return;
-  }
-
-  const { error } = await supabase.from("answers").insert([
-    {
-      question_id: id,
-      content: answerContent,
-      author_id: user.id,
-      author: user.email,
-    },
-  ]);
-
-  if (error) {
-    alert("Error posting answer: " + error.message);
-    console.error(error);
-    return;
-  }
-
-  // ✅ Notify question owner
-  if (question?.author_id && question.author_id !== user.id) {
-    await supabase.from("notifications").insert([
+    const { error } = await supabase.from("answers").insert([
       {
-        user_id: question.author_id,
-        type: "answer",
-        message: `${user.email} answered your question.`,
-        link: `/questions/${id}`,
+        question_id: id,
+        content: answerContent,
+        author_id: user.id,
+        author: user.email,
       },
     ]);
-  }
 
-  setAnswerContent("");
-  refreshAnswers();
-};
+    if (error) {
+      alert("Error posting answer: " + error.message);
+      console.error(error);
+      return;
+    }
 
+    // ✅ Notify question owner
+    if (question?.author_id && question.author_id !== user.id) {
+      await supabase.from("notifications").insert([
+        {
+          user_id: question.author_id,
+          type: "answer",
+          message: `${user.email} answered your question.`,
+          link: `/questions/${id}`,
+        },
+      ]);
+    }
 
-  const handleAcceptAnswer = async (answerId: number) => {
+    setAnswerContent("");
+    refreshAnswers();
+  };
+
+  const handleAcceptAnswer = async (answerId: string) => {
     // Set accepted = true for this one
     await supabase
       .from("answers")
@@ -206,11 +218,16 @@ const submitAnswer = async () => {
           answers.map((ans) => (
             <AnswerCard
               key={ans.id}
-              {...ans}
+              id={ans.id}
+              content={ans.content}
+              author={ans.author}
+              postedAt={new Date(ans.created_at).toLocaleString()}
+              votes={ans.votes}
+              userVote={ans.userVote}
+              isAccepted={ans.is_accepted}
               onVote={refreshAnswers}
               canAccept={userIsAuthor}
               onAccept={() => handleAcceptAnswer(ans.id)}
-              postedAt={new Date(ans.created_at).toLocaleString()}
             />
           ))
         ) : (
