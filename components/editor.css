@@ -1,0 +1,10 @@
+/* components/editor.css */
+.ProseMirror {
+  outline: none;
+  min-height: 150px;
+}
+
+.ProseMirror p {
+  margin: 0;
+  line-height: 1.5;
+}
